@@ -12,6 +12,7 @@ fixture_file = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine lea
 
 understat_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\understat\\*")
 
+player_columns_avg_last3 = ['total_points', 'ict_index', 'threat', 'creativity', 'influence', 'minutes']
 # get understat files for all teams
 def get_understat_dfs():
     understat_dfs = []
@@ -62,7 +63,7 @@ def add_averages_to_understat(df):
     # team strength (average points this season)
     df['avg_xpts'] = df[["xpts"]].expanding().mean().shift().fillna(value=0, axis=1)
     # team form (average points from last 5 fixtures)
-    df['last5_xpts'] = df[["xpts"]].rolling(window=5, min_periods=1).mean().shift().fillna(value=0, axis=1)
+    df['last3_xpts'] = df[["xpts"]].rolling(window=3, min_periods=1).mean().shift().fillna(value=0, axis=1)
     return df
 
 for df in understat_dfs:
@@ -71,10 +72,13 @@ for df in understat_dfs:
 
 # add player points averages and form to player gameweek data
 def add_averages_to_df(df):
-    # average of all previous gameweeks
-    df['avg_total_points'] = df[["total_points"]].expanding().mean().shift().fillna(value=0, axis=1)
-    # average of last 5 gameweeks
-    df['last5_total_points'] = df[["total_points"]].rolling(window=5, min_periods=1).mean().shift().fillna(value=0, axis=1)
+    for col in player_columns_avg_last3:
+        # average of all previous gameweeks
+        df[f'avg_{col}'] = df[[col]].expanding().mean().shift().fillna(value=0, axis=1)
+        # average of last 3 gameweeks
+        df[f'last3_{col}'] = df[[col]].rolling(window=3, min_periods=1).mean().shift().fillna(value=0, axis=1)
+        # no need to keep the original in the dataset
+        df.drop(col, axis=1)
     return df
 
 # fetch the team statistics at specific round
@@ -86,22 +90,22 @@ def get_understat_team_round_row(id_, round_):
 # add player and opponent team strength and form to player's gameweek data
 def add_team_columns_to_df(df):
     team_avg_xpts = []
-    team_last5_xpts = []
+    team_last3_xpts = []
     opp_avg_xpts = []
-    opp_last5_xpts = []
+    opp_last3_xpts = []
     for index, row in df.iterrows():
         team_id = row["player_team"]
         opp_id = row["opponent_team"]
         team_row = get_understat_team_round_row(team_id, index)
         opp_row = get_understat_team_round_row(opp_id, index)
         team_avg_xpts.append(team_row["avg_xpts"])
-        team_last5_xpts.append(team_row["last5_xpts"])
+        team_last3_xpts.append(team_row["last3_xpts"])
         opp_avg_xpts.append(opp_row["avg_xpts"])
-        opp_last5_xpts.append(opp_row["last5_xpts"])
+        opp_last3_xpts.append(opp_row["last3_xpts"])
     df[["team_avg_xpts"]]= team_avg_xpts
-    df[["team_last5_xpts"]]= team_last5_xpts
+    df[["team_last3_xpts"]]= team_last3_xpts
     df[["opp_avg_xpts"]]= opp_avg_xpts
-    df[["opp_last5_xpts"]]= team_avg_xpts
+    df[["opp_last3_xpts"]]= team_avg_xpts
     return df
 
 result = []
