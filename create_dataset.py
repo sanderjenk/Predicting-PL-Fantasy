@@ -12,7 +12,7 @@ fixture_file = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine lea
 
 understat_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\understat\\*")
 
-player_columns_avg_last3 = ['total_points', 'ict_index', 'threat', 'creativity', 'influence', 'minutes']
+player_columns_avg_last3 = ['total_points', 'ict_index', 'threat', 'creativity', 'influence', 'minutes', 'assists', 'bonus', 'clean_sheets', 'goals_scored', 'goals_conceded', 'own_goals', 'penalties_missed', 'penalties_saved', 'saves', 'red_cards', 'yellow_cards']
 # get understat files for all teams
 def get_understat_dfs():
     understat_dfs = []
@@ -117,8 +117,8 @@ for f in gw_files:
         continue
     player_name = get_player_name(f)
     df["name"] = player_name
-    player_id = get_player_id(f)
-    df["id"] = player_id
+    df["id"] = df[["element"]]
+    df.drop("element", axis=1)
     df = add_player_team_to_df(df)
     df = add_averages_to_df(df)
     df = add_team_columns_to_df(df)
