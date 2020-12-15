@@ -41,6 +41,14 @@ def get_player_id(path):
     player_id = namepart.split('_')[-1]
     return player_id
 
+def add_name_id_to_df(df, filename):
+    player_name = get_player_name(f)
+    df["name"] = player_name
+    df["id"] = df[["element"]]
+    df.drop("element", axis=1)
+    return df
+
+
 # get player team id from fixture (doesn't exist in player gameweek data)
 def get_player_team_id(fixture_id, was_home):
     fixture = fixture_df.loc[fixture_df['id'] == fixture_id]
@@ -136,10 +144,7 @@ for df in understat_dfs:
 result = []
 for f in gw_files:
     df = pd.read_csv(f)
-    player_name = get_player_name(f)
-    df["name"] = player_name
-    df["id"] = df[["element"]]
-    df.drop("element", axis=1)
+    df = add_name_id_to_df(df, f)
     df = add_player_team_to_df(df)
     df = add_averages_to_df(df)
     df = add_team_rounds_to_df(df)
