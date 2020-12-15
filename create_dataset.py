@@ -15,6 +15,7 @@ understat_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine 
 
 player_columns_avg_last3 = ['total_points', 'ict_index', 'threat', 'creativity', 'influence', 'minutes', 'assists', 'bonus', 'clean_sheets', 'goals_scored', 'goals_conceded', 'own_goals', 'penalties_missed', 'penalties_saved', 'saves', 'red_cards', 'yellow_cards']
 
+cleaned_players_file = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\cleaned_players.csv")[0]
 # get understat files for all teams
 def get_understat_dfs():
     understat_dfs = []
@@ -37,6 +38,21 @@ def get_player_name(path):
     namepart = path.split('\\')[-2]
     name = " ".join(namepart.split('_')[:-1])
     return name
+
+def get_player_name_as_pair(path):
+    namepart = path.split('\\')[-2]
+    name = namepart.split('_')[:-1]
+    return name[0], name[1]
+
+cleaned_players_df = pd.read_csv(cleaned_players_file)
+
+def add_position_to_df(df, first_name, last_name):
+    filter1 = cleaned_players_df["first_name"] == first_name
+    filter2 = cleaned_players_df["second_name"] == last_name
+    pos = cleaned_players_df.loc[filter1 & filter2]["element_type"].iloc[0]
+    df["position"] = pos
+    return df
+
 
 # get player id from filename
 def get_player_id(path):
@@ -175,6 +191,8 @@ for df in understat_dfs:
 result = []
 for f in gw_files:
     df = pd.read_csv(f)
+    first_name, last_name = get_player_name_as_pair(f)
+    df = add_position_to_df(df, first_name, last_name)
     df = add_name_id_to_df(df, f)
     df = add_player_team_to_df(df)
     df = add_averages_to_df(df)
@@ -185,4 +203,4 @@ for f in gw_files:
 # merging all the dataframes together
 df = pd.concat(result)
 
-df.to_csv(f"data2_{season}.csv")
+df.to_csv(f"data3_{season}.csv")
