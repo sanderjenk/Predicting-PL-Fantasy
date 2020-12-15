@@ -3,15 +3,18 @@ import glob
 import pandas as pd
 import os
 
-season = "2019-20"
+season = "2020-21"
 
 gw_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\players\\*\\gw.csv")
+
+history_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\players\\*\\history.csv")
 
 fixture_file = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\fixtures.csv")[0]
 
 understat_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\understat\\*")
 
 player_columns_avg_last3 = ['total_points', 'ict_index', 'threat', 'creativity', 'influence', 'minutes', 'assists', 'bonus', 'clean_sheets', 'goals_scored', 'goals_conceded', 'own_goals', 'penalties_missed', 'penalties_saved', 'saves', 'red_cards', 'yellow_cards']
+
 # get understat files for all teams
 def get_understat_dfs():
     understat_dfs = []
@@ -49,7 +52,6 @@ def add_name_id_to_df(df, filename):
     df.drop("element", axis=1)
     return df
 
-
 # get player team id from fixture (doesn't exist in player gameweek data)
 def get_player_team_id(fixture_id, was_home):
     fixture = fixture_df.loc[fixture_df['id'] == fixture_id]
@@ -65,6 +67,15 @@ def get_team_round(date, team_id):
     filter3 = fixture_df["kickoff_time"] < date
     rows = fixture_df.where((filter1 | filter2) & filter3).dropna()
     return len(rows.index)
+
+def get_history_df_dictionaries():
+    history_df_dict = dict()
+    for f in history_files:
+        player_id = get_player_id(f)
+        history_df_dict[player_id] = pd.read_csv(f)
+    return history_df_dict
+
+history_dict = get_history_df_dictionaries()
 
 # add round numbers to player's and opponents team (used later for attaching team statistics at these rounds)
 def add_team_rounds_to_df(df):
@@ -96,18 +107,33 @@ def add_player_team_to_df(df):
 # add averages to team understat round data by using expanding and rolling dataframe functions
 def add_averages_to_understat(df):
     # team strength (average points this season)
-    df['avg_xpts'] = df[["xpts"]].expanding().mean().shift().fillna(value=0, axis=1)
+    df['avg_xpts'] = df[["xpts"]].expanding().mean().shift().fillna(value=1, axis=1)
     # team form (average points from last 5 fixtures)
-    df['last3_xpts'] = df[["xpts"]].rolling(window=3, min_periods=1).mean().shift().fillna(value=0, axis=1)
+    df['last3_xpts'] = df[["xpts"]].rolling(window=3, min_periods=1).mean().shift().fillna(value=1, axis=1)
     return df
+
+def get_last_season_value(history_df, key):
+    if history_df.empty:
+        return 0
+
+    prev_season = history_df.iloc[-1]
+    return prev_season[key] / 30 #arbitratily chosen number of games (games played number doesn't exist)
 
 # add player points averages and form to player gameweek data
 def add_averages_to_df(df):
+    player_id = str(df.iloc[0]["id"])
+    has_history = player_id in history_dict
+    history_df = pd.DataFrame()
+
+    if has_history:
+        history_df = history_dict.get(player_id)
+
     for col in player_columns_avg_last3:
+        last_season_value = get_last_season_value(history_df, col)
         # average of all previous gameweeks
-        df[f'avg_{col}'] = df[[col]].expanding().mean().shift().fillna(value=0, axis=1)
+        df[f'avg_{col}'] = df[[col]].expanding().mean().shift().fillna(value=last_season_value, axis=1)
         # average of last 3 gameweeks
-        df[f'last3_{col}'] = df[[col]].rolling(window=3, min_periods=1).mean().shift().fillna(value=0, axis=1)
+        df[f'last3_{col}'] = df[[col]].rolling(window=3, min_periods=1).mean().shift().fillna(value=last_season_value, axis=1)
         # no need to keep the original in the dataset
         df.drop(col, axis=1)
     return df
@@ -155,4 +181,4 @@ for f in gw_files:
 # merging all the dataframes together
 df = pd.concat(result)
 
-df.to_csv(f"data{season}.csv")
+df.to_csv(f"data2_{season}.csv")
