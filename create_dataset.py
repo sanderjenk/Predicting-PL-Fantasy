@@ -68,6 +68,7 @@ def get_team_round(date, team_id):
     rows = fixture_df.where((filter1 | filter2) & filter3).dropna()
     return len(rows.index)
 
+# load player history files into dataframe dictionaries
 def get_history_df_dictionaries():
     history_df_dict = dict()
     for f in history_files:
@@ -121,6 +122,7 @@ def get_last_season_value(history_df, key):
 
 # add player points averages and form to player gameweek data
 def add_averages_to_df(df):
+
     player_id = str(df.iloc[0]["id"])
     has_history = player_id in history_dict
     history_df = pd.DataFrame()
@@ -129,6 +131,8 @@ def add_averages_to_df(df):
         history_df = history_dict.get(player_id)
 
     for col in player_columns_avg_last3:
+        # if player played in premier league last season, then use last season 
+        # averages when filling in missing averages in the beginning of the season
         last_season_value = get_last_season_value(history_df, col)
         # average of all previous gameweeks
         df[f'avg_{col}'] = df[[col]].expanding().mean().shift().fillna(value=last_season_value, axis=1)
