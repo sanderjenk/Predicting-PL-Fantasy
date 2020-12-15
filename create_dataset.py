@@ -3,7 +3,7 @@ import glob
 import pandas as pd
 import os
 
-season = "2020-21"
+season = "2019-20"
 
 gw_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\players\\*\\gw.csv")
 
@@ -16,6 +16,9 @@ understat_files = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine 
 player_columns_avg_last3 = ['total_points', 'ict_index', 'threat', 'creativity', 'influence', 'minutes', 'assists', 'bonus', 'clean_sheets', 'goals_scored', 'goals_conceded', 'own_goals', 'penalties_missed', 'penalties_saved', 'saves', 'red_cards', 'yellow_cards']
 
 cleaned_players_file = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\cleaned_players.csv")[0]
+
+players_raw_file = glob.glob(f"C:\\Users\\sande\\Desktop\\Kool\\courses\\machine learning\\Fantasy-Premier-League\\data\\{season}\\players_raw.csv")[0]
+
 # get understat files for all teams
 def get_understat_dfs():
     understat_dfs = []
@@ -32,6 +35,17 @@ def get_understat_dfs():
 fixture_df = pd.read_csv(fixture_file)
 
 understat_dfs = get_understat_dfs()
+
+def map_position_to_string(num):
+    if num == 1:
+        return "GK"
+    if num == 2:
+        return "DEF"
+    if num == 3:
+        return "MID"
+    if num == 4:
+        return "FWD"
+    return "FWD"
 
 # get player name from filename
 def get_player_name(path):
@@ -53,6 +67,14 @@ def add_position_to_df(df, first_name, last_name):
     df["position"] = pos
     return df
 
+players_raw_df = pd.read_csv(players_raw_file)
+
+def raw_add_position_to_df(df, first_name, last_name):
+    filter1 = players_raw_df["first_name"] == first_name
+    filter2 = players_raw_df["second_name"] == last_name
+    pos = players_raw_df.loc[filter1 & filter2]["element_type"].iloc[0]
+    df["position"] = map_position_to_string(pos)
+    return df
 
 # get player id from filename
 def get_player_id(path):
@@ -192,7 +214,12 @@ result = []
 for f in gw_files:
     df = pd.read_csv(f)
     first_name, last_name = get_player_name_as_pair(f)
-    df = add_position_to_df(df, first_name, last_name)
+
+    if season == "2019-20":
+        df = raw_add_position_to_df(df, first_name, last_name)
+    else:
+        df = add_position_to_df(df, first_name, last_name)
+
     df = add_name_id_to_df(df, f)
     df = add_player_team_to_df(df)
     df = add_averages_to_df(df)
