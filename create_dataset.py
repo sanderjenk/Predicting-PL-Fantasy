@@ -41,6 +41,7 @@ def get_player_id(path):
     player_id = namepart.split('_')[-1]
     return player_id
 
+# fix player id and add player name to dataframe
 def add_name_id_to_df(df, filename):
     player_name = get_player_name(f)
     df["name"] = player_name
