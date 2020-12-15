@@ -3,6 +3,7 @@ import glob
 import pandas as pd
 import os
 from itertools import groupby
+from datetime import timedelta
 
 season = "2019-20"
 
@@ -19,6 +20,9 @@ def get_understat_dfs():
     for f in understat_files:
         # ignore unnecessary files
         if "understat_player.csv" in f or "understat_team.csv" in f:
+            continue
+        # relegated teams have files in 20-21 season folder for some reason
+        if ("understat_Watford.csv" in f or "understat_Bournemouth.csv" in f) and season == '2020-21':
             continue
         understat_dfs.append(pd.read_csv(f, engine='python'))
     return understat_dfs
@@ -46,6 +50,28 @@ def get_player_team_id(fixture_id, was_home):
         return fixture['team_h']
     else:
         return fixture['team_a']
+
+def get_team_round(date, team_id):
+    filter1 = fixture_df["team_h"] == team_id
+    filter2 = fixture_df["team_a"] == team_id
+    filter3 = fixture_df["kickoff_time"] < date
+    rows = fixture_df.where((filter1 | filter2) & filter3).dropna()
+    return len(rows.index)
+
+def add_team_rounds_to_df(df):
+    player_team_rounds = []
+    opp_team_rounds = []
+    for index, row in df.iterrows():
+        p_team_id = row["player_team"]
+        o_team_id = row["opponent_team"]
+        kickoff_time = row["kickoff_time"]
+        player_team_round = get_team_round(kickoff_time, p_team_id)
+        opp_team_round = get_team_round(kickoff_time, o_team_id)
+        player_team_rounds.append(player_team_round)
+        opp_team_rounds.append(opp_team_round)
+    df[["player_team_round"]] = player_team_rounds
+    df[["opponent_team_round"]] = opp_team_rounds
+    return df
 
 # add player team column to player gameweek dataframe (doesn't exist in player gameweek data)
 def add_player_team_to_df(df):
@@ -96,8 +122,8 @@ def add_team_columns_to_df(df):
     for index, row in df.iterrows():
         team_id = row["player_team"]
         opp_id = row["opponent_team"]
-        team_row = get_understat_team_round_row(team_id, index)
-        opp_row = get_understat_team_round_row(opp_id, index)
+        team_row = get_understat_team_round_row(team_id, row["player_team_round"])
+        opp_row = get_understat_team_round_row(opp_id, row["opponent_team_round"])
         team_avg_xpts.append(team_row["avg_xpts"])
         team_last3_xpts.append(team_row["last3_xpts"])
         opp_avg_xpts.append(opp_row["avg_xpts"])
@@ -113,18 +139,17 @@ for f in gw_files:
     # since I use indices for determining the round (round numbers are messed up in the dataset), 
     # there is no way to determine the correct rounds for someone who hasn't played the whole season 
     df = pd.read_csv(f)
-    if len(df.index) != 38:
-        continue
     player_name = get_player_name(f)
     df["name"] = player_name
     df["id"] = df[["element"]]
     df.drop("element", axis=1)
     df = add_player_team_to_df(df)
     df = add_averages_to_df(df)
+    df = add_team_rounds_to_df(df)
     df = add_team_columns_to_df(df)
     result.append(df)
 
 # merging all the dataframes together
 df = pd.concat(result)
 
-df.to_csv("data.csv")
+df.to_csv(f"data{season}.csv")
