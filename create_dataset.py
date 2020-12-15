@@ -51,6 +51,7 @@ def get_player_team_id(fixture_id, was_home):
     else:
         return fixture['team_a']
 
+# get the round number (based on how many games has the team played before)
 def get_team_round(date, team_id):
     filter1 = fixture_df["team_h"] == team_id
     filter2 = fixture_df["team_a"] == team_id
@@ -58,6 +59,7 @@ def get_team_round(date, team_id):
     rows = fixture_df.where((filter1 | filter2) & filter3).dropna()
     return len(rows.index)
 
+# add round numbers to player's and opponents team (used later for attaching team statistics at these rounds)
 def add_team_rounds_to_df(df):
     player_team_rounds = []
     opp_team_rounds = []
@@ -91,10 +93,6 @@ def add_averages_to_understat(df):
     # team form (average points from last 5 fixtures)
     df['last3_xpts'] = df[["xpts"]].rolling(window=3, min_periods=1).mean().shift().fillna(value=0, axis=1)
     return df
-
-for df in understat_dfs:
-    df = add_averages_to_understat(df)
-
 
 # add player points averages and form to player gameweek data
 def add_averages_to_df(df):
@@ -134,10 +132,11 @@ def add_team_columns_to_df(df):
     df[["opp_last3_xpts"]]= team_avg_xpts
     return df
 
+for df in understat_dfs:
+    df = add_averages_to_understat(df)
+
 result = []
 for f in gw_files:
-    # since I use indices for determining the round (round numbers are messed up in the dataset), 
-    # there is no way to determine the correct rounds for someone who hasn't played the whole season 
     df = pd.read_csv(f)
     player_name = get_player_name(f)
     df["name"] = player_name
